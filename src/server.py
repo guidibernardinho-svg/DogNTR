@@ -1,78 +1,49 @@
-import socket
-import json
+import tkinter as tk
 import threading
+import socket
 
 # =========================
-# LOAD CONFIG
+# BACKEND (simulado)
 # =========================
-with open("config.json", "r") as f:
-    config = json.load(f)
+def start_server():
+    print("🚀 DogNTR server iniciado")
 
-VIDEO_PORT = config.get("video_port", 8000)
-INPUT_PORT = config.get("input_port", 9000)
-
-# =========================
-# VIDEO STREAM HANDLER
-# =========================
-def handle_video_stream():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(("0.0.0.0", VIDEO_PORT))
-    server.listen(1)
-
-    print(f"🎥 Video server running on port {VIDEO_PORT}")
-
-    conn, addr = server.accept()
-    print("📡 Video connected:", addr)
-
-    while True:
-        try:
-            data = conn.recv(65536)
-            if not data:
-                break
-
-            # aqui futuramente: decode frame (JPEG / RAW)
-            print(f"🎞️ Frame received: {len(data)} bytes")
-
-        except Exception as e:
-            print("❌ Video error:", e)
-            break
-
-    conn.close()
-
+    # aqui depois entra stream do 3DS
+    # socket real fica aqui
 
 # =========================
-# INPUT STREAM HANDLER
+# UI
 # =========================
-def handle_input_stream():
-    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server.bind(("0.0.0.0", INPUT_PORT))
-
-    print(f"🎮 Input server running on port {INPUT_PORT}")
-
-    while True:
-        try:
-            data, addr = server.recvfrom(1024)
-            msg = data.decode()
-
-            # exemplo: A:DOWN | STICK:120:80
-            print(f"🎮 Input from {addr}: {msg}")
-
-        except Exception as e:
-            print("❌ Input error:", e)
-            break
-
+root = tk.Tk()
+root.title("🎮 DogNTR")
+root.geometry("600x400")
 
 # =========================
-# MAIN
+# TELA DO 3DS (placeholder)
 # =========================
-if __name__ == "__main__":
-    print("🚀 DogNTR Server starting...")
+screen = tk.Label(root, text="📺 Tela do 3DS aqui", bg="black", fg="white", width=50, height=10)
+screen.pack(pady=10)
 
-    video_thread = threading.Thread(target=handle_video_stream)
-    input_thread = threading.Thread(target=handle_input_stream)
+# =========================
+# CONTROLES
+# =========================
+frame = tk.Frame(root)
+frame.pack()
 
-    video_thread.start()
-    input_thread.start()
+def press(btn):
+    print(f"🎮 {btn} pressionado")
 
-    video_thread.join()
-    input_thread.join()
+tk.Button(frame, text="A", width=5, command=lambda: press("A")).grid(row=0, column=0)
+tk.Button(frame, text="B", width=5, command=lambda: press("B")).grid(row=0, column=1)
+tk.Button(frame, text="X", width=5, command=lambda: press("X")).grid(row=0, column=2)
+tk.Button(frame, text="Y", width=5, command=lambda: press("Y")).grid(row=0, column=3)
+
+# =========================
+# THREAD DO SERVER
+# =========================
+threading.Thread(target=start_server, daemon=True).start()
+
+# =========================
+# LOOP UI
+# =========================
+root.mainloop()
