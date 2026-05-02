@@ -1,4 +1,4 @@
-name: DogNTR Build (macOS App)
+name: DogNTR macOS App Fix
 
 on:
   push:
@@ -10,44 +10,36 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: 🧱 Create .app structure
+      - name: 🧱 Build real .app structure
         run: |
           APP="DogNTR.app"
 
-          mkdir -p $APP/Contents/MacOS/src
+          mkdir -p $APP/Contents/MacOS
           mkdir -p $APP/Contents/Resources
 
-      - name: 📁 Copy project files
+      - name: 📁 Copy project
         run: |
-          cp -R src/* DogNTR.app/Contents/MacOS/src/
-          cp config.json DogNTR.app/Contents/Resources/
+          cp -R src $APP/Contents/MacOS/
+          cp config.json $APP/Contents/Resources/
 
-      - name: 🚀 Launcher (FIXED PATH)
+      - name: 🚀 Create EXECUTABLE (IMPORTANT FIX)
         run: |
           cat << 'EOF' > DogNTR.app/Contents/MacOS/DogNTR
           #!/bin/bash
 
-          DIR="$(cd "$(dirname "$0")" && pwd)"
-          cd "$DIR"
+          cd "$(dirname "$0")"
 
-          export PYTHONPATH="$DIR/src"
-
-          echo "🎮 DogNTR starting..."
+          export PYTHONPATH="$(pwd)/src"
 
           python3 src/server.py
           EOF
 
           chmod +x DogNTR.app/Contents/MacOS/DogNTR
 
-      - name: 🍎 Info.plist
+      - name: 🍎 FIXED Info.plist (CRITICAL)
         run: |
           cat << 'EOF' > DogNTR.app/Contents/Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
@@ -56,20 +48,33 @@ jobs:
               <key>CFBundleName</key>
               <string>DogNTR</string>
 
+              <key>CFBundleDisplayName</key>
+              <string>DogNTR</string>
+
               <key>CFBundleIdentifier</key>
               <string>com.dogntr.app</string>
+
+              <key>CFBundleVersion</key>
+              <string>1.0</string>
 
               <key>CFBundleExecutable</key>
               <string>DogNTR</string>
 
               <key>CFBundlePackageType</key>
               <string>APPL</string>
+
+              <key>LSMinimumSystemVersion</key>
+              <string>10.13</string>
           </dict>
           </plist>
           EOF
 
-      - name: 📦 Upload .app artifact
+      - name: 📦 Zip app
+        run: |
+          zip -r DogNTR-macOS.zip DogNTR.app
+
+      - name: 📤 Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DogNTR-macOS-App
-          path: DogNTR.app
+          name: DogNTR-app
+          path: DogNTR-macOS.zip
