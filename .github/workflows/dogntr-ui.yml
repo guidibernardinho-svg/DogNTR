@@ -1,0 +1,96 @@
+name: DogNTR macOS UI Build
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: 📁 Show project
+        run: |
+          echo "📂 Files:"
+          ls -R
+
+      - name: 🔎 Validate entry file
+        run: |
+          test -f src/server.py || (echo "❌ server.py not found" && exit 1)
+
+      - name: 📦 Install dependencies (Tkinter already included)
+        run: |
+          python3 -m pip install --upgrade pip
+
+      - name: 🧪 Syntax check (IMPORTANT)
+        run: |
+          python3 -m py_compile src/server.py
+
+      - name: 📦 Create .app structure
+        run: |
+          APP="DogNTR.app"
+
+          mkdir -p $APP/Contents/MacOS/src
+          mkdir -p $APP/Contents/Resources
+
+      - name: 📁 Copy project into app
+        run: |
+          cp -R src/* DogNTR.app/Contents/MacOS/src/
+
+      - name: 🚀 Launcher (GUI SAFE)
+        run: |
+          cat << 'EOF' > DogNTR.app/Contents/MacOS/DogNTR
+          #!/bin/bash
+
+          cd "$(dirname "$0")"
+
+          export PYTHONPATH="$(pwd)/src"
+
+          cd src
+          python3 server.py
+          EOF
+
+          chmod +x DogNTR.app/Contents/MacOS/DogNTR
+
+      - name: 🍎 Info.plist (REAL APP FIX)
+        run: |
+          cat << 'EOF' > DogNTR.app/Contents/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key>
+              <string>DogNTR</string>
+
+              <key>CFBundleIdentifier</key>
+              <string>com.dogntr.app</string>
+
+              <key>CFBundleExecutable</key>
+              <string>DogNTR</string>
+
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+
+              <key>LSMinimumSystemVersion</key>
+              <string>10.13</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: 📦 Zip .app
+        run: |
+          zip -r DogNTR-macOS.zip DogNTR.app
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DogNTR-macOS-UI
+          path: DogNTR-macOS.zip
