@@ -1,0 +1,84 @@
+name: DogNTR macOS Build + Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: 📦 Install deps (if any)
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: 🧱 Prepare .app structure
+        run: |
+          APP="DogNTR.app"
+
+          mkdir -p $APP/Contents/MacOS/src
+          mkdir -p $APP/Contents/Resources
+
+      - name: 📁 Copy FULL project
+        run: |
+          cp -R src/* DogNTR.app/Contents/MacOS/src/
+          cp config.json DogNTR.app/Contents/Resources/
+
+      - name: 🚀 Create launcher (IMPORTANT FIX)
+        run: |
+          cat << 'EOF' > DogNTR.app/Contents/MacOS/DogNTR
+          #!/bin/bash
+
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          cd "$DIR"
+
+          export PYTHONPATH="$DIR/src"
+
+          echo "🎮 DogNTR starting..."
+
+          python3 src/server.py
+          EOF
+
+          chmod +x DogNTR.app/Contents/MacOS/DogNTR
+
+      - name: 🍎 Info.plist
+        run: |
+          cat << 'EOF' > DogNTR.app/Contents/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key>
+              <string>DogNTR</string>
+
+              <key>CFBundleIdentifier</key>
+              <string>com.dogntr.app</string>
+
+              <key>CFBundleExecutable</key>
+              <string>DogNTR</string>
+
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: 📦 Zip app
+        run: |
+          zip -r DogNTR-macOS.zip DogNTR.app
+
+      - name: 🚀 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: DogNTR-macOS.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
