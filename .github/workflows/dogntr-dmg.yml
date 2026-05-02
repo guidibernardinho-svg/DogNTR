@@ -1,0 +1,93 @@
+name: DogNTR macOS App + DMG
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: 🧱 Create .app structure
+        run: |
+          APP="DogNTR.app"
+
+          mkdir -p $APP/Contents/MacOS/src
+          mkdir -p $APP/Contents/Resources
+
+      - name: 📁 Copy project
+        run: |
+          cp -R src/* DogNTR.app/Contents/MacOS/src/
+          cp config.json DogNTR.app/Contents/Resources/
+
+      - name: 🚀 Launcher
+        run: |
+          cat << 'EOF' > DogNTR.app/Contents/MacOS/DogNTR
+          #!/bin/bash
+
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          cd "$DIR"
+
+          export PYTHONPATH="$DIR/src"
+
+          cd src
+          python3 server.py
+          EOF
+
+          chmod +x DogNTR.app/Contents/MacOS/DogNTR
+
+      - name: 🍎 Info.plist
+        run: |
+          cat << 'EOF' > DogNTR.app/Contents/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key>
+              <string>DogNTR</string>
+
+              <key>CFBundleIdentifier</key>
+              <string>com.dogntr.app</string>
+
+              <key>CFBundleExecutable</key>
+              <string>DogNTR</string>
+
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: 📦 Install create-dmg tool
+        run: |
+          brew install create-dmg
+
+      - name: 💿 Create DMG
+        run: |
+          mkdir dmg
+
+          cp -R DogNTR.app dmg/
+
+          create-dmg \
+            --volname "DogNTR" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 450 200 \
+            DogNTR.dmg \
+            dmg/
+
+      - name: 📤 Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: DogNTR-macOS-DMG
+          path: DogNTR.dmg
